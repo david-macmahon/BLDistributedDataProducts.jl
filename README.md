@@ -167,24 +167,28 @@ data = GBT.loadscan("AGBT22A_999_46", 3)
 
 Several higher level main process functions are available:
 
-### `workerarray(session, scan, suffix="*"; root="/datax/dibas")`
+`workerarray(session, scan, suffix="*"; root="/datax/dibas")`
 
-This fucntion returns an Array of workers for the given `session`, `scan`,
-`suffix`, and `root` sorted in slot order.  If the number of workers is a
-mulitple of 8 and each set of 8 consecutive workers are from the same band, this
-will be reshaped as an 8xN Matrix where each column corresponds to a band (i.e.
-single IF).
+`workerarray` returns an Array of workers for the given `session`, `scan`,
+`suffix`, and `root` sorted in slot order.
 
-### `workerfbh5data([workers::AbstractArray,] session, scan[, suffix][; root])`
+If the number of workers is a mulitple of 8 and each set of 8 consecutive
+workers are from the same band, this will be reshaped as an 8xN Matrix where
+each column corresponds to a band (i.e.  single IF).
 
-This function maps the given `workers` Array to an Array of data Arrays for the
-given `session`, `scan`, `suffix`, and `root`.  If `workers` is not given, this
-uses the worker Array returned by `workerarray`.  The `suffix` argument defaults
-to `0002.h5`.  The `root` keyword argument defaults to `/datax/dibas`.
+`workerfbh5data([workers::AbstractArray,] session, scan[, suffix][; root])`
 
-### `loadscan(session, scan, suffix="0002.h5"; root="/datax/dibas")`
+`workerfbh5data` maps the given `workers` Array to an Array of FBH5 data Arrays
+for the given `session`, `scan`, `suffix`, and `root`.
 
-This function passes the arguments to `workerfbh5data` and then concatenates the
-8 Arrays from each band into a single Array per band.  It also removes the so
-called *DC spike* by setting each DC spike channel to the same value as a
-neighboring channel.
+If `workers` is not given, this uses the worker Array returned by `workerarray`.
+The `suffix` argument defaults to `0002.h5`.  The `root` keyword argument
+defaults to `/datax/dibas`.
+
+`loadscan(session, scan, suffix="0002.h5"; root="/datax/dibas")`
+
+`loadscan` passes the arguments to `workerfbh5data` and then concatenates the 8
+Arrays from each band into a single Array per band.
+
+It also removes the so called *DC spike* by setting each DC spike channel to the
+same value as a neighboring channel.
