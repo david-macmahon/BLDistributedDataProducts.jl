@@ -163,7 +163,7 @@ channel.
 """
 function loadscan(session, scan, suffix="0002.h5"; root="/datax/dibas")
     ds = workerfbh5data(session, scan, suffix; root)
-    nfpc = size(ds1[1], 1) ÷ 64 # 64 coarse channels per node at GBT
+    nfpc = size(ds[1], 1) ÷ 64 # 64 coarse channels per node at GBT
     spike = nfpc÷2 + 1
     ds1 = map(c->reduce(vcat, c), eachcol(ds))
     #=
