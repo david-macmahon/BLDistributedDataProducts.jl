@@ -94,14 +94,14 @@ main process functions.
 
 Main module functions live in the `BLDistributedDataProducts.GBT` module while
 worker functions live in the `BLDistributedDataProducts.GBT.WorkerFunctions`
-module.  Typcially users will load this package using something like this:
+module.  Typcially users will use this package as shown here:
 
 ```julia
 using BLDistributedDataProducts
 
 GBT.setupworkers()
 
-# Load "*0002.h5" data from all wsession AGBT22A_999_46
+# Load "*0002.h5" data from all nodes for session AGBT22A_999_46, scan 0003
 data = GBT.loadscan("AGBT22A_999_46", 3)
 ```
 
