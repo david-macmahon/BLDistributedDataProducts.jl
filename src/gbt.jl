@@ -65,13 +65,13 @@ function workerscans(session, pattern="*"; root="/datax/dibas")
     filter(!isempty∘last, wss)
 end
 
-function workerproducts(session, pattern; root="/datax/dibas")
+function workerproducts(session, pattern::AbstractString; root="/datax/dibas")
     assertworkers()
     wps = pmap(_->myproducts(session, pattern; root), 1:nworkers())
     filter(!isempty∘last, wps)
 end
 
-function workerproducts(session, scan, suffix; root="/datax/dibas")
+function workerproducts(session, scan, suffix="*"; root="/datax/dibas")
     assertworkers()
     wps = pmap(_->myproducts(session, scan, suffix; root), 1:nworkers())
     filter(!isempty∘last, wps)
