@@ -12,6 +12,7 @@ HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
 
 [compat]
 Glob = "1"
+H5Zbitshuffle = "0.1"
 HDF5 = "0.16"
 julia = "1.6"
 
