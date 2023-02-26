@@ -108,6 +108,13 @@ function fqav(A, n; f=sum)
     dropdims(f(reshape(A,sz), dims=1), dims=1)
 end
 
+function workerfbh5header(workers::AbstractArray, session, scan, suffix="0002.h5"; root="/datax/dibas")
+    futures = map(workers) do worker
+        @spawnat worker getfbh5header(session, scan, suffix; root)
+    end
+    fetch.(futures)
+end
+
 """
     workerarray(session, scan, suffix="*"; root="/datax/dibas")
 
