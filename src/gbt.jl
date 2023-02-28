@@ -6,7 +6,7 @@ include("gbtworkerfunctions.jl")
 using .WorkerFunctions
 
 function datahosts(prefix="")
-    ["$(prefix)blc$i$j" for j=0:7 for i=0:7]
+    ["$(prefix)blc$i$j" for i=0:7 for j=0:7]
 end
 
 function setupworkers(hosts::AbstractVector=[];
