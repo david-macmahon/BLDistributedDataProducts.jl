@@ -25,7 +25,6 @@ function setupworkers(hosts::AbstractVector=[];
         end
 
         workerprocs = addprocs(hosts;
-            max_parallel=length(hosts),
             exeflags="--project=$project",
             tunnel,
             dir,
