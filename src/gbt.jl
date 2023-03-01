@@ -45,6 +45,31 @@ function setupworkers(hosts::AbstractVector=[];
     workerprocs
 end
 
+function getinventories(filere::Regex=r"0002.h5$";
+    root="/datax/dibas",
+    sessionre=r"[AT]GBT[12][0-9][AB]_\d+_\d+",
+    extra = "GUPPI",
+    playerre=r"^BLP([?<band>0-7])(?<bank>[0-7])$",
+    workerprocs=workers()
+)
+    st = stacktrace()
+    if length(st) > 20
+        println.(st)
+        error("unintended recursion detected")
+    end
+    futures = map(workerprocs) do worker
+        @spawnat worker getinventory(filere; root, sessionre, extra, playerre)
+    end
+    fetch.(futures)
+end
+
+function getheaders(workers::AbstractArray, fnames::AbstractArray{<:AbstractString})
+    futures = map(zip(workers, fnames)) do (worker, fname)
+        @spawnat worker getheader(fname)
+    end
+    fetch.(futures)
+end
+
 #
 # main process functions that aggregate results from workers
 #

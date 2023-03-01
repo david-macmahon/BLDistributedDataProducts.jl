@@ -2,6 +2,9 @@ module WorkerFunctions
 
 using HDF5, H5Zbitshuffle, Distributed, Glob, Blio
 
+export getinventory
+export getheader
+
 export getsessions,     mysessions
 export getscans,        myscans
 export getproducts,     myproducts
@@ -49,6 +52,72 @@ function parserawspecname(name)
         (?<src>.*)_
         (?<scan>\d\d\d\d).rawspec.
         (?<product>\d\d\d\d).(h5|fil)$"x, name)
+end
+
+InventoryTuple = NamedTuple{
+    (:imjd, :smjd, :session, :scan, :src_name, :band, :bank, :host, :file, :worker),
+    Tuple{Int64, Int64, String, String, String, Int64, Int64, String, String, Int64}
+}
+
+function getinventory(filere::Regex;
+    root="/datax/dibas",
+    sessionre=r"[AT]GBT[12][0-9][AB]_\d+_\d+",
+    extra = "GUPPI",
+    playerre=r"^BLP([?<band>0-7])(?<bank>[0-7])$"
+)
+    host = gethostname()
+    worker = myid()
+    inventory = InventoryTuple[]
+
+    _, sessions, _ = first(walkdir(root))
+    filter!(s->match(sessionre, s)!==nothing, sessions)
+
+    for session in sessions
+        _, players, _ = first(walkdir(joinpath.(root, session, extra)))
+        filter!(s->match(playerre, s)!==nothing, players)
+
+        for player in players
+            for (dir, _, files) in walkdir(joinpath(root, session, extra, player))
+                filter!(s->match(filere, s)!==nothing, files)
+                for base in files
+                    file = joinpath(dir, base)
+                    m = parseguppiname(file)
+                    if m === nothing
+                        @warn "$(host):$(file) did not match guppiname regex"
+                        continue
+                    end
+                    if m[:band] === nothing || m[:bank] === nothing
+                        @warn "$(host):$(file) did not match player regex"
+                        continue
+                    end
+                    imjd = parse(Int, m[:imjd])
+                    smjd = parse(Int, m[:smjd])
+                    scan = string(m[:scan])
+                    src_name = string(m[:src])
+                    band = parse(Int, m[:band])
+                    bank = parse(Int, m[:bank])
+                    push!(inventory, (;
+                        imjd,
+                        smjd,
+                        session,
+                        scan,
+                        src_name,
+                        band,
+                        bank,
+                        host,
+                        file,
+                        worker
+                    ))
+                end # files
+            end # walk player
+        end # players
+    end # sessions
+
+    inventory
+end
+
+function getheader(fname::AbstractString)
+    HDF5.ishdf5(fname) ? getfbh5header(fname) : getfbheader(fname)
 end
 
 function getsessions(pattern="[AT]GBT[12][0-9][AB]_*_"; root="/datax/dibas")
