@@ -17,7 +17,7 @@ function setupworkers(hosts::AbstractVector=[];
     project="@BLDistributedDataProducts",
     kwargs...
 )
-    if nworkers() > 1 || workers()[1] != 1
+    if nprocs() > 1
         @warn "workers already added, not adding more"
     else
         if isempty(hosts)
@@ -44,7 +44,7 @@ end
 #
 
 function assertworkers()
-    @assert nworkers() > 1 || workers()[1] != 1 "no remote workers setup"
+    @assert nprocs() > 1 "no remote workers setup"
 end
 
 function workerplayers(dir)
