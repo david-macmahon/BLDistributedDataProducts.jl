@@ -133,11 +133,6 @@ function workerfbh5header(session, scan, suffix; root="/datax/dibas")
     pmap(_->myfbh5header(session, scan, suffix; root), 1:nworkers())
 end
 
-function fqav(A, n; f=sum)
-    sz = (n, :, size(A)[2:end]...)
-    dropdims(f(reshape(A,sz), dims=1), dims=1)
-end
-
 function workerfbh5header(workers::AbstractArray, session, scan, suffix="0002.h5"; root="/datax/dibas")
     futures = map(workers) do worker
         @spawnat worker getfbh5header(session, scan, suffix; root)

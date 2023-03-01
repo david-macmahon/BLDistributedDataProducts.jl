@@ -4,6 +4,7 @@ using HDF5, H5Zbitshuffle, Distributed, Glob, Blio
 
 export getinventory
 export getheader
+export fqav
 
 export getsessions,     mysessions
 export getscans,        myscans
@@ -118,6 +119,11 @@ end
 
 function getheader(fname::AbstractString)
     HDF5.ishdf5(fname) ? getfbh5header(fname) : getfbheader(fname)
+end
+
+function fqav(A, n; f=sum)
+    sz = (n, :, size(A)[2:end]...)
+    dropdims(f(reshape(A,sz), dims=1), dims=1)
 end
 
 function getsessions(pattern="[AT]GBT[12][0-9][AB]_*_"; root="/datax/dibas")
