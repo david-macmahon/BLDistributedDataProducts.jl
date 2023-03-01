@@ -37,10 +37,10 @@ function parseguppiname(name)
         (?<scan>\d\d\d\d)"x, name)
 end
 
-function parseh5name(h5name)
+function parserawspecname(name)
     match(r"/BLP
-        (?<bank>[0-7])
-        (?<node>[0-7])/
+        (?<band>[0-7])
+        (?<bank>[0-7])/
         ((?<host>blc..)_)?
         guppi_
         (?<imjd>\d+)_
@@ -48,7 +48,7 @@ function parseh5name(h5name)
         (\d+_)?
         (?<src>.*)_
         (?<scan>\d\d\d\d).rawspec.
-        (?<product>\d\d\d\d).h5$"x, h5name)
+        (?<product>\d\d\d\d).(h5|fil)$"x, name)
 end
 
 function getsessions(pattern="[AT]GBT[12][0-9][AB]_*_"; root="/datax/dibas")
