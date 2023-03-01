@@ -24,7 +24,12 @@ function myglob(pattern, dir)
 end
 
 function parseguppiname(name)
-    match(r"guppi_
+    match(r"(/BLP
+        (?<band>[0-7])
+        (?<bank>[0-7])/)?
+        ([^/]*/)?
+        ((?<host>blc..)_)?
+        guppi_
         (?<imjd>\d+)_
         (?<smjd>\d+)_
         (\d+_)?
