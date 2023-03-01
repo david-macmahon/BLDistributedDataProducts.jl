@@ -115,11 +115,15 @@ function myslot(ssession, scan, suffix=""; root="/datax/dibas")
     myid() => getslot(ssession, scan, suffix; root)
 end
 
+function getfbheader(fbfile)
+    open(io->read(io, Filterbank.Header), fbfile)
+end
+
 function getfbheader(session, scan, suffix; root="/datax/dibas")
     fnames = getproducts(session, scan, suffix; root)
     n = length(fnames)
     n == 1 || error("got $n file names, expected 1")
-    open(io->read(io, Filterbank.Header), fnames[1])
+    getfbheader(fnames[1])
 end
 
 function getslotfbheader(session, scan, suffix; root="/datax/dibas")
@@ -135,7 +139,7 @@ function myslotfbheader(session, scan, suffix; root="/datax/dibas")
     myid() => getslotfbheader(session, scan, suffix; root)
 end
 
-function fbh5header(fbh5file)
+function getfbh5header(fbh5file)
     h5open(fbh5file) do h5
         data = h5["data"]
         attrs = attributes(data)
@@ -149,7 +153,7 @@ function getfbh5header(session, scan, suffix; root="/datax/dibas")
     products = getproducts(session, scan, suffix; root)
     n = length(products)
     n == 1 || error("got $n products, expected 1")
-    fbh5header(products[1])
+    getfbh5header(products[1])
 end
 
 function myfbh5header(session, scan, suffix; root="/datax/dibas")
@@ -202,7 +206,7 @@ end
 
 function mysessionattrs(session, pattern; root="/datax/dibas", extra="GUPPI/BLP??")
     files = glob(joinpath(session, extra, pattern), root)
-    myid() => fbh5header.(files)
+    myid() => getfbh5header.(files)
 end
 
-end # module Workersfunction myplayers
+end # module WorkersFunctions
