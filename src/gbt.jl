@@ -19,6 +19,7 @@ function setupworkers(hosts::AbstractVector=[];
 )
     if nprocs() > 1
         @warn "workers already added, not adding more"
+        return Int[]
     else
         if isempty(hosts)
             hosts = datahosts(prefix)
@@ -36,7 +37,8 @@ function setupworkers(hosts::AbstractVector=[];
             using BLDistributedDataProducts.GBT.WorkerFunctions
         ))
     end
-    nothing
+
+    workerprocs
 end
 
 #
