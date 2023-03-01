@@ -33,7 +33,11 @@ function setupworkers(hosts::AbstractVector=[];
             kwargs...
         )
 
-        Distributed.remotecall_eval(Main, workerprocs, :(
+        # Do one first to avoid potential precompilation collision
+        Distributed.remotecall_eval(Main, workerprocs[1:1], :(
+            using BLDistributedDataProducts.GBT.WorkerFunctions
+        ))
+        Distributed.remotecall_eval(Main, workerprocs[2:end], :(
             using BLDistributedDataProducts.GBT.WorkerFunctions
         ))
     end
