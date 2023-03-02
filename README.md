@@ -9,34 +9,22 @@ BL@GBT cluster.  This package does not provide data distribution services.
 Datasets are recorded and reduced on multipe nodes during and after observatings
 sessions.  The GBT separates the concept of *project ID* (e.g. `AGBT22B_999` and
 *session ID* (e.g. `01`), but we consider a session to be a concatentation of
-GBT's project ID and session ID (e.g. `AGBT22B_999_01`).  Within a sessions,
-each observation is called a `scan`.  GBT assigns monotonically increasing scan
+GBT's project ID and session ID (e.g. `AGBT22B_999_01`).  Within sessions, each
+observation is called a `scan`.  GBT assigns monotonically increasing scan
 numbers to scans in a session.  These are usually displayed as four digit
-integers with leading zeros (e.g. `0001`).  This package returnd scans using a
-`NamedTuple` containing four fields:
+strings with leading zeros (e.g. `0001`).
 
-  * `imjd` - The integer *modified Julian date* (MJD) of the start of the scan
-  * `smjd` - The second in the MJD (0-86400)
-  * `src` - The name of the *source* being observed
-  * `scan` - The four digit GBT scan number (as a `String`)
+Each recording node for a given scan has a portion of the
+data for that scan.  The data are distributed over the nodes in one or more
+*bands* (i.e.  racks) containing eight *banks* (i.e. nodes) each.  In a GUPPI
+RAW product, the band is given by the `BANDNUM` header value; the bank is given
+by the `BANKNUM` header value.  At GBT, the band and bank can also be obtained
+from the name of the *player* (a logical reference to the recording node) which
+has the format `BLP<band><bank>` (e.g. `BLP42`).  The eight banks of a band
+correspond to a single 1500 MHz wide IF signal.
 
-When passing a `scan` parameter it is allowed to pass a `NamedTuple` with only
-some of these fields defined, but it is also allowed and often sufficient to
-just pass just an integer scan number (e.g. `23`) rather than a `NamedTuple`.
-
-Each scan can have multiple *products* associated with it.  Essentially a
-product is a file.  Each recording node for a given scan has a portion of the
-data for that scan.  The data are distributed over the nodes in *bands* (i.e.
-racks) containing eight *banks* (i.e. nodes) each.  This package refers to the
-`(band, bank)` tuple as a *slot*.  In a GUPPI RAW product, the band is given by
-the `BANDNUM` header value; the bank is given by the `BANKNUM` header value.  At
-GBT, the band and bank can also be obtained from the name of the *player* (a
-logical reference to the recording node) which has the format `BLP<band><bank>`
-(e.g. `BLP42`).  The eight banks of a band correspond to a single 1500 MHz wide
-IF signal.
-
-Note: the term *bank* is also used at the GBT to refer to a *band*.  Usually the
-intended meaning is clear from the context.
+Note: the term *bank* is also often used at the GBT to refer to a *band*.
+Usually the intended meaning is clear from the context.
 
 ## Main process and distributed workers
 
@@ -45,7 +33,7 @@ Jupyter notebook) which can run on any node.  It uses *worker processes* on the
 compute nodes to do most of the work.  The `GBT.setupworkers` function can be
 used to start worker processes (referred to as *workers*) on some or, by
 default, all of the GBT compute nodes.  The main process communicates with the
-worker processes via `ssh`.  The user much have their `ssh` configuration setup
+worker processes via `ssh`.  The user must have their `ssh` configuration setup
 for passphraseless ssh access to the compute nodes from the host running the
 main process.
 
@@ -53,7 +41,7 @@ The workers are started using `--project=@BLDistributedDataProducts` so users
 are encouraged to setup a shared environment by that name on the GBT cluster and
 install this pacakge into that environment.  Until this package (and `Blio`) are
 added to the General Julia package registry, this can be setup by following
-these steps:
+these installation steps:
 
 ```
 $ julia -e '
@@ -65,25 +53,68 @@ Pkg.add(url="https://github.com/david-macmahon/BLDistributedDataProducts.jl")
 ```
 
 The `GBT.setupworkers` function also takes a `project` keyword argument that
-allows one to specify a custom path to an existing `BLDistributedDataProducts`
-directory if desired.
+allows one to specify a different project name, if desired.
 
-## Worker to node mappings
+Each worker has a *process ID* (aka *PID*), but the assignment of PIDs to remote
+nodes is non-deterministic and ephemeral (i.e. worker 2 may run on remote node
+`blc42` on one run, but on the next run worker 2 may run a different remote
+node).  `GBT.setupworkers` returns a Vector of worker PIDs that correspond
+one-to-one with the given Vector of hostnames or the default list
+`[blc00, blc01, ..., blc77]` if not explixitly specified.  This returned Vector
+of worker PIDs should be saved for future use.
 
-The mapping of workers to nodes (i.e. hosts) is nondeterministic and the mapping
-of nodes to bands/banks is somewhat variable as well.  This makes any sort of
-heuristical mapping impractical so we instead rely on discovering these mappings
-by querying the workers for information about sessions, scans, products, and
-slots.
+## Getting the inventory
 
-To support this, the workers are provided with functions to look for sessions,
-scans, products, and slots on the their local file systems.  These functions
-generally fall into one of two types: a generic `get` variant that gets the
-results indicated by the function name (e.g.  `getsessions`) and a `my` variant
-that returns a `worker_id => results`.  The `my` variants are useful for
-tracking results from multiple workers.  The main process has `worker` variants
-(e.g. `workersessions`) of these functions that use the `pmap` function to
-aggregate the results from calling the `my` variants across all workers.
+In order to interact with remote datasets, we need to learn which datasets exist
+on the remote nodes and the nodes' correspnding workers.  This is done using the
+`GBT.getinventories` function, which takes a Vector of worker PIDs such as the
+one returned by `GBT.setupworkers` and a regular expression to match datasets
+(defaulting to `r"0002.h5$"`).  Each remote worker will search for files
+matching the regular expression and return a Vector containing one NamedTuple
+for each file found.  The file search relies on a certain directory hierarchy
+(some of which can be altered by keyword arguments).  From this hierarchy and
+other file naming conventions, various bits of metadata are extraced.  Each
+NamedTuple contains these fields in this order:
+
+- `imjd::Int` - The integer MJD at the start of the recording
+- `smjd::Int` - The second in the day at the start of recording
+- `session::String` - The ID of of the observing session
+- `scan::String` - The scan number within the observing session
+- `src_name::String` - The name of the observed source
+- `band::Int` - The ID of the band within the IF config (aka "rack")
+- `bank::Int` - The ID of the node within the band/rack
+- `host::String` - The name of the host that contains the found file
+- `file::String` - The full absolute path to the found file
+- `worker::Int` - The worker PID that is currently running on `host`
+
+Thus, `GBT.getinventories` returns a `Vector{Vector{NamedTuple}}`, i.e. a Vector
+of Vectors of NamedTuples.  The returned Vector contains one element per remote
+node.  Each element is a Vector of NamedTuples corresponding to the files found
+by the worker on the remote node.
+
+Currently this package does not utilize DataFrames, but using DataFrames makes
+it much more convenient to work with the returned inventories.  Created a
+DataFrame from the returned Vector can be done like this:
+
+```julia
+inventories = GBT.getinventories(workerprocs)
+dfinventory = DataFrame(Iterators.flatten(inventories)) |> sort!
+```
+
+The above example also sorts the new DataFrame, which puts all the rows in time
+order and then in `(band, bank)` order (aka Player order).  Often a subset of
+rows correspinding to a specific `session` and `scan` is desired.  It can be
+convenient to group the DataFrame by session and scan like this:
+
+```julia
+gdfinventory = groupby(dfinentory, Cols(:session, :scan))
+```
+
+Then all the rows corresponding to a given session and scan can be obtained via:
+
+```julia
+gdfinventory[(session="AGBT21A_996_25", scan="0135")]
+```
 
 ## Functions
 
@@ -92,65 +123,19 @@ functions*, which the user calls from the main process, and *worker functions*,
 which run on the worker processes and are typically only called from within the
 main process functions.
 
-Main module functions live in the `BLDistributedDataProducts.GBT` module while
+Main process functions live in the `BLDistributedDataProducts.GBT` module while
 worker functions live in the `BLDistributedDataProducts.GBT.WorkerFunctions`
-module.  Typcially users will use this package as shown here:
+module.  Typcially users will use this package similar to this:
 
 ```julia
-using BLDistributedDataProducts
+using BLDistributedDataProducts, DataFrames
 
-GBT.setupworkers()
-
-# Load "*0002.h5" data from all nodes for session AGBT22A_999_46, scan 0003
-data = GBT.loadscan("AGBT22A_999_46", 3)
+workerprocs = GBT.setupworkers()
+inventories = GBT.getinventories(workerprocs)
+gdfinventory = groupby(sort!(DataFrame(Iterators.flatten(inventories))))
 ```
 
-### Sessions
-
-#### Worker functions
-
-* `getsessions(pattern=SESSIONPATTERN[]; root=DATAROOT[])`
-* `mysessions(pattern=SESSIONPATTERN[]; root=DATAROOT[])`
-
-#### Main process function
-
-* `workersessions(pattern=SESSIONPATTERN[]; root=DATAROOT[])`
-
-### Scans
-
-#### Worker functions
-
-* `getscans(session, pattern="*"; root=DATAROOT[])`
-* `myscans(session, pattern="*"; root=DATAROOT[])`
-
-#### Main process function
-
-* `workerscans(session, pattern="*"; root=DATAROOT[])`
-
-### Products
-
-#### Worker functions
-
-* `getproducts(session, pattern; root=DATAROOT[])`
-* `getproducts(session, scan, suffix; root=DATAROOT[])`
-* `myproducts(session, pattern; root=DATAROOT[])`
-* `myproducts(session, scan, suffix; root=DATAROOT[])`
-
-#### Main process functions
-
-* `workerproducts(session, pattern; root=DATAROOT[])`
-* `workerproducts(session, scan, suffix; root=DATAROOT[])`
-
-### Slots
-
-#### Worker functions
-
-* `getslot(session, scan; root=DATAROOT[])`
-* `myslot(session, scan; root=DATAROOT[])`
-
-#### Main process function
-
-* `workerslots(session, scan; root=DATAROOT[])`
+### Below here is TODO!!!
 
 ### FBH5 attributes
 

@@ -45,146 +45,44 @@ function setupworkers(hosts::AbstractVector=[];
     workerprocs
 end
 
-function getinventories(filere::Regex=r"0002.h5$";
+function getinventories(workers::AbstractArray, filere::Regex=r"0002.h5$";
     root="/datax/dibas",
     sessionre=r"[AT]GBT[12][0-9][AB]_\d+_\d+",
     extra = "GUPPI",
-    playerre=r"^BLP([?<band>0-7])(?<bank>[0-7])$",
-    workerprocs=workers()
+    playerre=r"^BLP([?<band>0-7])(?<bank>[0-7])$"
 )
     st = stacktrace()
     if length(st) > 20
         println.(st)
         error("unintended recursion detected")
     end
-    futures = map(workerprocs) do worker
+    futures = map(workers) do worker
         @spawnat worker getinventory(filere; root, sessionre, extra, playerre)
     end
     fetch.(futures)
 end
 
 function getheaders(workers::AbstractArray, fnames::AbstractArray{<:AbstractString})
+    @assert size(workers) == size(fnames) "workers and fnames must have the same size"
+
     futures = map(zip(workers, fnames)) do (worker, fname)
         @spawnat worker getheader(fname)
     end
     fetch.(futures)
 end
 
-#
-# main process functions that aggregate results from workers
-#
+function getdata(workers::AbstractArray, fnames::AbstractArray{<:AbstractString};
+    ntime::Integer=0, fqavby::Integer=1, fqavfunc=sum
+    )
+    @assert size(workers) == size(fnames) "workers and fnames must have the same size"
 
-function assertworkers()
-    @assert nprocs() > 1 "no remote workers setup"
-end
-
-function workerplayers(dir)
-    assertworkers()
-    pmap(_->myplayers(dir), 1:nworkers())
-end
-
-function workersessions(pattern="[AT]GBT[12][0-9][AB]_*_"; root="/datax/dibas")
-    assertworkers()
-    wss = pmap(_->mysessions(pattern; root), 1:nworkers())
-    filter(!isempty∘last, wss)
-end
-
-function workerscans(session, pattern="*"; root="/datax/dibas")
-    assertworkers()
-    wss = pmap(_->myscans(session, pattern; root), 1:nworkers())
-    filter(!isempty∘last, wss)
-end
-
-function workerproducts(session, pattern::AbstractString; root="/datax/dibas")
-    assertworkers()
-    wps = pmap(_->myproducts(session, pattern; root), 1:nworkers())
-    filter(!isempty∘last, wps)
-end
-
-function workerproducts(session, scan, suffix="*"; root="/datax/dibas")
-    assertworkers()
-    wps = pmap(_->myproducts(session, scan, suffix; root), 1:nworkers())
-    filter(!isempty∘last, wps)
-end
-
-function workerslots(session, scan, suffix=""; root="/datax/dibas", by=identity)
-    assertworkers()
-    wss = pmap(_->myslot(session, scan, suffix; root), 1:nworkers())
-    sort(filter(!isnothing∘last, wss); by)
-end
-
-function workerfbheaders(session, scan, suffix; root="/datax/dibas", by=identity)
-    assertworkers()
-    sort(pmap(_->myfbheader(session, scan, suffix; root), 1:nworkers()); by)
-end
-
-function slotfbheaders(session, scan, suffix; root="/datax/dibas")
-    assertworkers()
-    sort(pmap(_->getslotfbheader(session, scan, suffix; root), 1:nworkers()); by=first)
-end
-
-function slotfbdata(session, scan, suffix; root="/datax/dibas")
-    assertworkers()
-    sort(pmap(_->getslotfbdata(session, scan, suffix; root), 1:nworkers()); by=first)
-end
-
-function workerfbh5header(session, scan, suffix; root="/datax/dibas")
-    assertworkers()
-    pmap(_->myfbh5header(session, scan, suffix; root), 1:nworkers())
-end
-
-function workerfbh5header(workers::AbstractArray, session, scan, suffix="0002.h5"; root="/datax/dibas")
-    futures = map(workers) do worker
-        @spawnat worker getfbh5header(session, scan, suffix; root)
+    futures = map(zip(workers, fnames)) do (worker, fname)
+        @spawnat worker WorkerFunctions.getdata(fname; ntime, fqavby, fqavfunc)
     end
     fetch.(futures)
 end
 
-"""
-    workerarray(session, scan, suffix="*"; root="/datax/dibas")
-
-Returns an Array of workers for the given `session`, `scan`, `suffix`, and
-`root` sorted in slot order.  If the number of workers is a mulitple of 8 and
-each set of 8 consecutive workers are from the same band, this will be reshaped
-as as 8xN Matrix.
-"""
-function workerarray(session, scan, suffix="*"; root="/datax/dibas")
-    ws = workerslots(session, scan, suffix; root, by=last)
-    if length(ws) % 8 == 0
-        ws8 = reshape(ws, length(ws) > 8 ? (8,:) : 8)
-        bands = (first∘last).(ws8)
-        # If each column comes from a single band
-        if all(bands .== bands[1:1, :])
-            w = first.(ws8)
-        else
-            w = first.(ws)
-        end
-    else
-        w = first.(ws)
-    end
-    w
-end
-
-"""
-    workerfbh5data([workers::AbstractArray,] session, scan[, suffix][; root])
-
-Maps the `workers` Array to an Array of data Arrays for the given `session`,
-`scan`, `suffix`, and `root`.  If `workers` is not given, this uses the worker
-Array returned by `workerarray`.  The `suffix` argument defaults to `0002.h5`.
-The `root` keyword argument defaults to `/datax/dibas`.
-"""
-function workerfbh5data(workers::AbstractArray, session, scan, suffix="0002.h5"; root="/datax/dibas")
-    futures = map(workers) do worker
-        @spawnat worker getfbh5data(session, scan, suffix; root)
-    end
-    fetch.(futures)
-end
-
-function workerfbh5data(session, scan, suffix="0002.h5"; root="/datax/dibas")
-    workers = workerarray(session, scan, suffix; root)
-    workerfbh5data(workers, session, scan, suffix; root)
-end
-
+#=
 """
     loadscan(session, scan, suffix="0002.h5"; root="/datax/dibas")
 
@@ -208,5 +106,6 @@ function loadscan(session, scan, suffix="0002.h5"; root="/datax/dibas")
     foreach(d->d[spike:nfpc:end,:,:].=d[spike-1:nfpc:end,:,:], ds1) # De-spike!
     ds1
 end
+=#
 
 end # module GBTDistributedData
