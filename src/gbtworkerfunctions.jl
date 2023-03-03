@@ -7,10 +7,29 @@ export getinventory
 export getfbheader, getfbh5header, getheader
 export getfbdata, getfbh5data, getdata
 
+"""
+    fqav(A, n::Integer; f=sum)
+
+Reduce every `n` elements of the first dimension of `A` to a single value using
+function `f`.
+"""
 function fqav(A, n::Integer; f=sum)
     n <= 1 && return A
     sz = (n, :, size(A)[2:end]...)
     dropdims(f(reshape(A,sz), dims=1), dims=1)
+end
+
+"""
+    fqav(A::AbstractRange, n::Integer)
+
+Return a range whose elements are the mean of every `n` elements of `r`.
+"""
+function fqav(r::AbstractRange, n::Integer)
+    n <= 1 && return A
+    fch1 = first(r) + (n-1)*step(r)/2
+    foff = n * step(r)
+    nchan = length(r) ÷ n
+    range(fch1; step=foff, length=nchan)
 end
 
 function parseguppiname(name)
