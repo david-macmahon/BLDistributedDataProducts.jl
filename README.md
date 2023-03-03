@@ -110,10 +110,11 @@ convenient to group the DataFrame by session and scan like this:
 ssinv = groupby(inv, Cols(:session, :scan))
 ```
 
-Then all the rows corresponding to a given session and scan can be obtained via:
+Then all the rows corresponding to a given session and scan can be obtained by
+using a `(session, scan)` tuple:
 
 ```julia
-myscan = ssinv[(session="AGBT21A_996_25", scan="0135")]
+myscan = ssinv[("AGBT21A_996_25", "0135")]
 ```
 
 ## Using the inventory
