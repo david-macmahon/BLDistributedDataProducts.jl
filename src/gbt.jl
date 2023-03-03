@@ -51,11 +51,6 @@ function getinventories(workers::AbstractArray, filere::Regex=r"0002.h5$";
     extra = "GUPPI",
     playerre=r"^BLP([?<band>0-7])(?<bank>[0-7])$"
 )
-    st = stacktrace()
-    if length(st) > 20
-        println.(st)
-        error("unintended recursion detected")
-    end
     futures = map(workers) do worker
         @spawnat worker getinventory(filere; root, sessionre, extra, playerre)
     end
