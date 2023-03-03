@@ -107,7 +107,7 @@ rows corresponding to a specific `session` and `scan` is desired.  It can be
 convenient to group the DataFrame by session and scan like this:
 
 ```julia
-ssinv = groupby(ivv, Cols(:session, :scan))
+ssinv = groupby(inv, Cols(:session, :scan))
 ```
 
 Then all the rows corresponding to a given session and scan can be obtained via:
