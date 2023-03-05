@@ -182,6 +182,28 @@ function `fqavfunc` (defaulting to `sum`).  This is sometimes referred to as
   `mean`, `maximum`, `minimum`, etc.  The function must support the `dims`
   keyword to specify the dimension to work along.
 
+### Working with kurtosis
+
+Kurtosis is an interesting statisitic when analyzing noise dominated data such
+as radio astronomy data.  The `GBT.getkurtosis` function can be used to get the
+kurtosis of frequency channels over time for the data selected by `idxs` using
+the workers and filenames specficed by `workers` and `fnames`.  The kurtosis
+computation is performed on each worker.  The returned Array of data Arrays has
+the same size as `workers` and `fnames`.  Each data Array is dimensioned as
+`(channel, polarization/stokes)`, even if there is only one polarization or
+stokes parameter.
+
+```julia
+getkurtosis(
+    workers::AbstractArray,
+    fnames::AbstractArray{<:AbstractString},
+    idxs::Tuple=(:,:,:)
+)
+```
+
+The returned kurtosis values are actually the so called *excess kurtosis* (i.e.
+`kurtosis - 3`).
+
 ## Utility functions
 
 The GBT package has an `fqav` function that can be used to perform frequency

@@ -1,13 +1,14 @@
 name = "BLDistributedDataProducts"
 uuid = "ad0e4739-5cde-4603-b467-e3d9d8469c7f"
 authors = ["David MacMahon <davidm@astro.berkeley.edu> and contributors"]
-version = "0.3.0"
+version = "0.3.1"
 
 [deps]
 Blio = "87855aa7-8b24-49b4-b316-97c011f78d17"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 H5Zbitshuffle = "51b4e782-877f-4ccf-958a-27bf628210da"
 HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
 Blio = "0.5.1"

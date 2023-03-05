@@ -78,6 +78,15 @@ function getdata(
     fetch.(futures)
 end
 
+function getkurtosis(workers::AbstractArray, fnames::AbstractArray{<:AbstractString}, idxs::Tuple=(:,:,:))
+    @assert size(workers) == size(fnames) "workers and fnames must have the same size"
+
+    futures = map(zip(workers, fnames)) do (worker, fname)
+        @spawnat worker WorkerFunctions.getkurtosis(fname, idxs)
+    end
+    fetch.(futures)
+end
+
 #=
 """
     loadscan(session, scan, suffix="0002.h5"; root="/datax/dibas")

@@ -1,11 +1,11 @@
 module WorkerFunctions
 
-using HDF5, H5Zbitshuffle, Distributed, Blio
+using HDF5, H5Zbitshuffle, Distributed, Blio, StatsBase
 
 export fqav
 export getinventory
 export getfbheader, getfbh5header, getheader
-export getfbdata, getfbh5data, getdata
+export getfbdata, getfbh5data, getdata, getkurtosis
 
 """
     fqav(A, n::Integer; f=sum)
@@ -174,6 +174,13 @@ function getdata(fname, idxs::Tuple=(:,:,:); fqavby::Integer=1, fqavfunc=sum)
     idxs = sanitizeidxs(idxs)
     HDF5.ishdf5(fname) ? getfbh5data(fname, idxs; fqavby, fqavfunc) :
                          getfbdata(fname, idxs; fqavby, fqavfunc)
+end
+
+function getkurtosis(fname, idxs::Tuple=(:,:,:))
+    data = getdata(fname, idxs)
+    nchan, nif, ntime = size(data)
+    k = map(kurtosis, eachrow(reshape(data, nchan*nif, ntime)))
+    reshape(k, nchan, nif)
 end
 
 end # module WorkersFunctions
