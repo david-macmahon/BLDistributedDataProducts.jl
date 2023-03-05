@@ -1,7 +1,7 @@
 name = "BLDistributedDataProducts"
 uuid = "ad0e4739-5cde-4603-b467-e3d9d8469c7f"
 authors = ["David MacMahon <davidm@astro.berkeley.edu> and contributors"]
-version = "0.3.1"
+version = "0.3.2"
 
 [deps]
 Blio = "87855aa7-8b24-49b4-b316-97c011f78d17"

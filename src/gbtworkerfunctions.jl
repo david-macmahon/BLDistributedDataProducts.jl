@@ -123,15 +123,27 @@ function getinventory(filere::Regex;
 end
 
 function getfbheader(fbname)
-    open(io->read(io, Filterbank.Header), fbname)
+    fbh = open(io->read(io, Filterbank.Header), fbname)
+    # Compute nfpc for Green Bank files as Int32 to match FBH5's nfpc type
+    fbh[:nfpc] = round(Int32, 187.5/64/abs(fbh[:foff]))
+    # Delete redundant fields to match FBH5 headers
+    delete!(fbh, :header_size)
+    delete!(fbh, :sample_size)
+    fbh
 end
 
 function getfbh5header(fbh5name)
     h5open(fbh5name) do h5
         data = h5["data"]
         attrs = attributes(data)
-        pairs = [Symbol(k) => attrs[k][] for k in keys(attrs)]
-        push!(pairs, :ntimes => size(data, ndims(data)))
+        pairs = [Symbol(k) => attrs[k][] for k in keys(attrs) if k != "DIMENSION_LABELS"]
+        elsize = sizeof(eltype(data))
+        if !haskey(attrs, "nfpc")
+            # Compute nfpc for Green Bank files as Int32 to match FBH5's nfpc type
+            push!(pairs, round(Int32, 187.5/64/abs(fbh[:foff])))
+        end
+        push!(pairs, :data_size => elsize * prod(size(data)))
+        push!(pairs, :nsamps => size(data, ndims(data)))
         NamedTuple(sort(pairs, by=first))
     end
 end

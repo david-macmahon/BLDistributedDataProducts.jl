@@ -127,8 +127,13 @@ data from the remote files.
 To read the headers (i.e. metadata), we use `GBT.getheaders`, which takes an
 Array of workers and a similarly sized Array of filenames and maps them to an
 Array of headers from the files.  Each header is either a `Filterbank.Header`
-object for Filterbank files or a `NamedTuple` for HDF5 files.  Vectors of each
-type can be used to construct DataFrames, if desired.
+object for Filterbank files or a `NamedTuple` for HDF5 files.  `getheaders` adds
+and removes some fields from Filterbank and HDF5 headers to make the header
+fields consistent across file types.  For well-formed input files, the retuned
+Vector can be passed directly to the DataFrame construcor.  To handle malformed
+input files with missing or extra header fields, it is safer to construct an
+empty DataFrame and `push!` the elements of the returned Vector with
+`cols=:union`.
 
 ```julia
 # ssinv is a GroupedDataFrame with grouping columns "session" and "scan" as created above
@@ -140,8 +145,15 @@ myscan = ssinv[(session="AGBT21A_996_25", scan="0135")]
 # hdrs is a Vector of headers (exact type depends on Filterbank vs HDF5)
 hdrs = GBT.getheaders(myscan.worker, myscan.file)
 
-# hdrdf is a DataFrame of headers whose rows correspond to rows of myscan
+# For well-formed input files, the returned headers can be passed to DataFrame
 hdrdf = DataFrame(hdrs)
+
+# For malformed input files with missing or extra fields, it is safer to `push!`
+# with `cols=:union`.
+robudtdf = DataFrame()
+for h in getheaders(sdf.worker, sdf.file)
+    push!(robustdf, h; cols=:union)
+end
 ```
 
 ### Reading data
