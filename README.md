@@ -146,20 +146,41 @@ hdrdf = DataFrame(hdrs)
 
 ### Reading data
 
-Reading data from remote files is done using `GBT.getdata`, which is similar to
-`GBT.getheaders`, but with some keyword arguments to optionally limit the amount
-of data returned.  The keyword arguments are:
+Reading data from remote files is done using `GBT.getdata`. Like
+`GBT.getheaders`, `GBT.getdata` takes an Array of workers and an Array of
+filenames.  It also takes an optional Tuple of indices, `idxs`, that can be used
+to select a portion of each worker's dataset.  If not specified, all data is
+returned.  As a reminder, the data arrays are indexed by
+`(channel, polarization/stokes, time)`.  Integers in `idxs` are treated as
+ranges of length 1 to ensure that the returned Array always has three
+dimensions, even when single values from a dimension are being requested.
 
-- `ntime::Integer` - Return this many time samples (0, the default, means all)
-- `fqavby::Integer` - Perform *frequency averaging* by this factor when greater
-  than 1.  If greater than 1 then it must be a divisor of the number of
-  channels.  Every `fqavby` adjacent freqeuncy channles will be "averaged"
-  together using the function provided by `fqavfunc`.  The number of frequency
-  channels returned will be `nchan ÷ fqavby`.  The default is 1 (i.e. no
-  frequency averaging).
-- `fqavby` - The function to apply to adjacent channels when performing
+```julia
+getdata(
+    workers::AbstractArray,
+    fnames::AbstractArray{<:AbstractString},
+    idxs::Tuple=(:,:,:)
+    ;
+    fqavby::Integer=1,
+    fqavfunc=sum
+)
+```
+
+The keyword arguments can be used reduce the amount of data returned by reducing
+every `fqavby` adjacent frequency channels to a single frequency channel via
+function `fqavfunc` (defaulting to `sum`).  This is sometimes referred to as
+*FreQuency AVeraging* so the related keywords start with `fqav`:
+
+- `fqavby::Integer` - Perform frequency "averaging" by this factor when greater
+  than 1.  If greater than 1 then it must be a divisor of the number of channels
+  selected by `idxs`.  Every `fqavby` adjacent freqeuncy channles will be
+  "averaged" together using the function provided by `fqavfunc`.  The number of
+  frequency channels returned will be `nchan ÷ fqavby`.  The default is 1 (i.e.
+  no frequency averaging).
+- `fqavfunc` - The function to apply to adjacent channels when performing
   frequency "averaging".  The default is `sum`, but other possibilities are
-  `mean`, `maximum`, `minimum`, etc.
+  `mean`, `maximum`, `minimum`, etc.  The function must support the `dims`
+  keyword to specify the dimension to work along.
 
 ## Utility functions
 
@@ -172,8 +193,9 @@ always computes the mean.
 * `fqav(A, n::Integer; f=sum)`
 
   Reduce every `n` elements of the first dimension of `A` to a single value
-  using function `f`.
+  using function `f`.  If `n` is 1 then `A` is returned.
 
-* `fqav(A::AbstractRange, n::Integer)`
+* `fqav(r::AbstractRange, n::Integer)`
 
-  Return a range whose elements are the mean of every `n` elements of `r`.
+  Return a range whose elements are the mean of every `n` elements of `r`.  If
+  `n` is 1 then `r` is returned.

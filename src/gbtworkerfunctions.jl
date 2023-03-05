@@ -140,28 +140,40 @@ function getheader(fname)
     HDF5.ishdf5(fname) ? getfbh5header(fname) : getfbheader(fname)
 end
 
-function getfbdata(fbname; ntime::Integer=0, fqavby::Integer=1, fqavfunc=sum)
-    data = open(fbname) do io
-        d = Array(read(io, Filterbank.Header), ntime)
-        read!(io, d)
-        d
-    end
-    fqav(data, fqavby; f=fqavfunc)
+"""
+    sanitizeidxs(idxs::Tuple)
+
+Return a Tuple that is the same as `idxs` except with Integers replaced by
+ranges of length 1.
+"""
+function sanitizeidxs(idxs::Tuple)::Tuple
+    Tuple(i isa Integer ? (i:i) : i for i in idxs)
 end
 
-function getfbh5data(fbh5name; ntime::Integer=0, fqavby::Integer=1, fqavfunc=sum)
+function getfbdata(fbname, idxs::Tuple=(:,:,:); fqavby::Integer=1, fqavfunc=sum)
+    @assert length(idxs) == 3 "idxs must have exactly three indices"
+    _, dmmap = Filterbank.mmap(fbname)
+    data = fqav(dmmap[idxs...], fqavby; f=fqavfunc)
+    finalize(parent(dmmap))
+    data
+end
+
+function getfbh5data(fbh5name, idxs::Tuple=(:,:,:); fqavby::Integer=1, fqavfunc=sum)
+    @assert length(idxs) == 3 "idxs must have exactly three indices"
     data = h5open(fbh5name) do h5
-        if ntime < 1
+        if idxs === (:,:,:)
             h5["data"][]
         else
-            h5["data"][:,:,1:ntime]
+            h5["data"][idxs...]
         end
     end
     fqav(data, fqavby; f=fqavfunc)
 end
 
-function getdata(fname; ntime::Integer=0, fqavby::Integer=1, fqavfunc=sum)
-    HDF5.ishdf5(fname) ? getfbh5data(fname; ntime, fqavby, fqavfunc) : getfbdata(fname; ntime, fqavby, fqavfunc)
+function getdata(fname, idxs::Tuple=(:,:,:); fqavby::Integer=1, fqavfunc=sum)
+    idxs = sanitizeidxs(idxs)
+    HDF5.ishdf5(fname) ? getfbh5data(fname, idxs; fqavby, fqavfunc) :
+                         getfbdata(fname, idxs; fqavby, fqavfunc)
 end
 
 end # module WorkersFunctions

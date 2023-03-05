@@ -66,13 +66,14 @@ function getheaders(workers::AbstractArray, fnames::AbstractArray{<:AbstractStri
     fetch.(futures)
 end
 
-function getdata(workers::AbstractArray, fnames::AbstractArray{<:AbstractString};
-    ntime::Integer=0, fqavby::Integer=1, fqavfunc=sum
-    )
+function getdata(
+    workers::AbstractArray, fnames::AbstractArray{<:AbstractString}, idxs::Tuple=(:,:,:);
+    fqavby::Integer=1, fqavfunc=sum
+)
     @assert size(workers) == size(fnames) "workers and fnames must have the same size"
 
     futures = map(zip(workers, fnames)) do (worker, fname)
-        @spawnat worker WorkerFunctions.getdata(fname; ntime, fqavby, fqavfunc)
+        @spawnat worker WorkerFunctions.getdata(fname, idxs; fqavby, fqavfunc)
     end
     fetch.(futures)
 end
