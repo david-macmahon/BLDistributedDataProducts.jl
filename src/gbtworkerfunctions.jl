@@ -75,6 +75,9 @@ function getinventory(filere::Regex;
     worker = myid()
     inventory = InventoryTuple[]
 
+    # Bail out early if root is not a directory
+    isdir(root) || return inventory
+
     _, sessions, _ = first(walkdir(root))
     filter!(s->match(sessionre, s)!==nothing, sessions)
 
