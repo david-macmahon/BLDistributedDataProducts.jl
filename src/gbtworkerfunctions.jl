@@ -25,7 +25,7 @@ end
 Return a range whose elements are the mean of every `n` elements of `r`.
 """
 function fqav(r::AbstractRange, n::Integer)
-    n <= 1 && return A
+    n <= 1 && return r
     fch1 = first(r) + (n-1)*step(r)/2
     foff = n * step(r)
     nchan = length(r) ÷ n
