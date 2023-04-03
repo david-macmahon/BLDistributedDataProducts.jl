@@ -78,7 +78,10 @@ function getinventory(filere::Regex;
     # Bail out early if root is not a directory
     isdir(root) || return inventory
 
-    _, sessions, _ = first(walkdir(root))
+    _, sessions, sessionlinks = first(walkdir(root))
+    # Handle symlinks to session directories
+    append!(sessions, filter(l->isdir(joinpath(root,l)), sessionlinks))
+    # Only keep sessions that match session regular expression
     filter!(s->match(sessionre, s)!==nothing, sessions)
 
     for session in sessions
